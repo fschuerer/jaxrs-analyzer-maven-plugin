@@ -52,7 +52,17 @@ import static java.util.stream.Collectors.joining;
  * @requiresDependencyResolution compile
  */
 public class JAXRSAnalyzerMojo extends AbstractMojo {
-
+    
+    /**
+     * @parameter default-value="false" property="jaxrs-analyzer.publicAPI"
+     */
+    private boolean publicAPI;
+    
+    /**
+     * @parameter property="jaxrs-analyzer.additionalResource"
+     */
+    private File additionalResource;
+    
     /**
      * The chosen backend format. Defaults to plaintext.
      *
@@ -171,7 +181,7 @@ public class JAXRSAnalyzerMojo extends AbstractMojo {
             return;
         }
 
-        final BackendType backendType = getBackendType();
+        final BackendType backendType = getBackendType(publicAPI);
         final Backend backend = configureBackend(backendType);
 
         LogProvider.info("analyzing JAX-RS resources, using " + backend.getName() + " backend");
@@ -180,12 +190,15 @@ public class JAXRSAnalyzerMojo extends AbstractMojo {
         final Set<Path> classPaths = getDependencies();
         LogProvider.debug("Dependency class paths are: " + classPaths);
 
-        final Set<Path> projectPaths = singleton(outputDirectory.toPath());
+        final Set<Path> projectPaths = new HashSet<Path>();
+        projectPaths.add(outputDirectory.toPath());
+//                singleton(outputDirectory.toPath());
+        projectPaths.addAll(getTKSDependencies());
         LogProvider.debug("Project paths are: " + projectPaths);
-
+        
         final Set<Path> sourcePaths = singleton(sourceDirectory.toPath());
         LogProvider.debug("Source paths are: " + sourcePaths);
-
+        
         handleSourceEncoding();
 
         // create target sub-directory
@@ -195,11 +208,20 @@ public class JAXRSAnalyzerMojo extends AbstractMojo {
 
         final Path fileLocation = resourcesDirectory.toPath().resolve(backendType.getFileLocation());
 
-        LogProvider.info("Generating resources at " + fileLocation.toAbsolutePath());
-
+        if (publicAPI) {
+            LogProvider.info("Generating public API at " + fileLocation.toAbsolutePath());
+        } else {
+            LogProvider.info("Generating private API at " + fileLocation.toAbsolutePath());
+        }
+        
         // start analysis
         final long start = System.currentTimeMillis();
-        new JAXRSAnalyzer(projectPaths, sourcePaths, classPaths, project.getName(), project.getVersion(), backend, fileLocation).analyze();
+        
+        Path additionalResourcePath = null;
+        if (additionalResource != null) {
+            additionalResourcePath = Paths.get(additionalResource.toURI());
+        }
+        new JAXRSAnalyzer(publicAPI, additionalResourcePath, projectPaths, sourcePaths, classPaths, project.getName(), project.getVersion(), backend, fileLocation).analyze();
         LogProvider.debug("Analysis took " + (System.currentTimeMillis() - start) + " ms");
     }
 
@@ -208,7 +230,7 @@ public class JAXRSAnalyzerMojo extends AbstractMojo {
             System.setProperty("project.build.sourceEncoding", encoding);
     }
 
-    private BackendType getBackendType() {
+    private BackendType getBackendType(boolean isPublicAPI) {
         switch (backend.toLowerCase()) {
             case "plaintext":
                 return BackendType.PLAINTEXT;
@@ -216,6 +238,11 @@ public class JAXRSAnalyzerMojo extends AbstractMojo {
                 return BackendType.ASCIIDOC;
             case "swagger":
                 return BackendType.SWAGGER;
+            case "zuul": {
+                if (isPublicAPI)
+                    return BackendType.ZUULPUBLIC;
+                return BackendType.ZUULPRIVATE;
+            }
             default:
                 throw new IllegalArgumentException("Backend " + backend + " not valid! Valid values are: " +
                         Stream.of(BackendType.values()).map(Enum::name).map(String::toLowerCase).collect(joining(", ")));
@@ -253,14 +280,34 @@ public class JAXRSAnalyzerMojo extends AbstractMojo {
         final Set<Path> dependencies = artifacts.stream().filter(a -> !a.getScope().equals(Artifact.SCOPE_TEST)).map(Artifact::getFile)
                 .filter(Objects::nonNull).map(File::toPath).collect(Collectors.toSet());
 
-        final String analyzerVersion = project.getPluginArtifactMap().get("com.sebastian-daschner:jaxrs-analyzer-maven-plugin").getVersion();
+        final String analyzerVersion = project.getPluginArtifactMap().get("com.thyssenkrupp.tkse.dla:jaxrs-analyzer-maven-plugin").getVersion();
 
         // Java EE 7 and JAX-RS Analyzer API is needed internally
         dependencies.add(fetchDependency("javax:javaee-api:7.0"));
-        dependencies.add(fetchDependency("com.sebastian-daschner:jaxrs-analyzer:" + analyzerVersion));
+        dependencies.add(fetchDependency("com.thyssenkrupp.tkse.dla:jaxrs-analyzer:" + analyzerVersion));
         return dependencies;
     }
+    
+    private Set<Path> getTKSDependencies() throws MojoExecutionException {
+        project.setArtifactFilter(a -> true);
 
+        Set<Artifact> artifacts = project.getArtifacts();
+        if (artifacts.isEmpty()) {
+            artifacts = project.getDependencyArtifacts();
+        }
+
+        final Set<Path> dependencies = artifacts
+                .stream()
+                .filter(a -> !a.getScope().equals(Artifact.SCOPE_TEST))
+                .filter(a -> a.getGroupId().startsWith("com.thyssenkrupp.tkse"))
+                .map(Artifact::getFile)
+                .filter(Objects::nonNull)
+                .map(File::toPath)
+                .collect(Collectors.toSet());
+
+        return dependencies;
+    }
+     
     private Path fetchDependency(final String artifactIdentifier) throws MojoExecutionException {
         ArtifactRequest request = new ArtifactRequest();
         final DefaultArtifact artifact = new DefaultArtifact(artifactIdentifier);

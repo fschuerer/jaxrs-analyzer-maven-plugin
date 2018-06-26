@@ -1,14 +1,14 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.sebastian-daschner</groupId>
+    <groupId>com.thyssenkrupp.tkse.dla</groupId>
     <artifactId>jaxrs-analyzer-maven-plugin</artifactId>
     <version>0.17-SNAPSHOT</version>
     <name>JAX-RS Analyzer Maven Plugin</name>
     <packaging>maven-plugin</packaging>
 
     <description>Maven plugin for the JAX-RS Analyzer.</description>
-    <url>https://github.com/sdaschner/jaxrs-analyzer-maven-plugin</url>
+    <url>https://github.com/fschuerer/jaxrs-analyzer-maven-plugin.git</url>
 
     <licenses>
         <license>
@@ -27,7 +27,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.sebastian-daschner</groupId>
+            <groupId>com.thyssenkrupp.tkse.dla</groupId>
             <artifactId>jaxrs-analyzer</artifactId>
             <version>0.17-SNAPSHOT</version>
         </dependency>
@@ -80,21 +80,23 @@
     </properties>
 
     <scm>
-        <connection>scm:git:git@github.com:sdaschner/jaxrs-analyzer-maven-plugin.git</connection>
-        <developerConnection>scm:git:git@github.com:sdaschner/jaxrs-analyzer-maven-plugin.git</developerConnection>
-        <url>scm:git:git@github.com:sdaschner/jaxrs-analyzer-maven-plugin.git</url>
+        <connection>scm:git:git@github.com:fschuerfer/jaxrs-analyzer-maven-plugin.git</connection>
+        <developerConnection>scm:git:git@github.com:fschuerer/jaxrs-analyzer-maven-plugin.git</developerConnection>
+        <url>scm:git:git@github.com:fschuerer/jaxrs-analyzer-maven-plugin.git</url>
         <tag>HEAD</tag>
     </scm>
 
     <distributionManagement>
-        <snapshotRepository>
-            <id>ossrh-snapshots</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
-        </snapshotRepository>
         <repository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+            <id>releases</id>
+            <name>releases</name>
+            <url>http://www-artifactory:8081/artifactory/dla-releases</url>
         </repository>
+        <snapshotRepository>
+            <id>snapshots</id>
+            <name>snapshots</name>
+            <url>http://www-artifactory:8081/artifactory/dla-snapshots</url>
+        </snapshotRepository>
     </distributionManagement>
 
     <profiles>

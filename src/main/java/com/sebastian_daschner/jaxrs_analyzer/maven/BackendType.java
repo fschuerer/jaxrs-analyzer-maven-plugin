@@ -11,7 +11,11 @@ enum BackendType {
 
     ASCIIDOC("rest-resources.adoc"),
 
-    SWAGGER("swagger.json");
+    SWAGGER("swagger.json"),
+    
+    ZUULPUBLIC("zuul-public.json"),
+    
+    ZUULPRIVATE("zuul-private.json");
 
     private final String fileLocation;
 
